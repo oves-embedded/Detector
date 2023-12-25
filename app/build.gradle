@@ -1,0 +1,100 @@
+plugins {
+    id 'com.android.application'
+    id 'org.greenrobot.greendao'
+    id 'com.huawei.agconnect'
+}
+
+android {
+    namespace 'com.ov.producer'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.ov.producer"
+        minSdk 26
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // 设置支持的SO库架构
+            abiFilters 'armeabi' //, 'x86', 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    //新加入
+    greendao {
+        schemaVersion 1 //数据库版本号 每次升级数据库都需要改变版本，只能增加
+        daoPackage 'com.ov.producer.dao'  //设置DaoMaster、DaoSession、Dao包名
+        targetGenDir 'src/main/java' //设置DaoMaster、DaoSession、Dao目录
+    }
+
+}
+
+dependencies {
+
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.5.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+
+    // 谷歌兼容库：https://developer.android.google.cn/jetpack/androidx/releases/appcompat?hl=zh-cn
+    // noinspection GradleCompatible
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+
+    implementation 'com.jakewharton:butterknife:10.2.1'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:10.2.1'
+
+    //操作sqlite
+    implementation 'org.greenrobot:greendao:3.3.0'
+
+    implementation 'com.github.CymChad:BaseRecyclerViewAdapterHelper:3.0.4'
+
+    implementation 'org.greenrobot:eventbus:3.1.1'
+    implementation 'com.alibaba:fastjson:1.1.54.android'
+
+    implementation 'com.tencent.bugly:crashreport:latest.release' //其中latest.release指代最新Bugly SDK版本号，也可以指定明确的版本号，例如4.0.3
+
+//    implementation 'com.github.Jasonchenlijian:FastBle:2.4.0'
+
+    // 权限请求框架：https://github.com/getActivity/XXPermissions
+    implementation 'com.github.getActivity:XXPermissions:18.5'
+
+    // 谷歌兼容库：https://developer.android.google.cn/jetpack/androidx/releases/appcompat?hl=zh-cn
+    // noinspection GradleCompatible
+//    implementation 'com.android.support:appcompat-v7:28.0.0'
+
+    // 吐司框架：https://github.com/getActivity/Toaster
+    implementation 'com.github.getActivity:Toaster:12.6'
+
+    implementation 'com.github.getActivity:TitleBar:10.5'
+
+    implementation  'io.github.scwang90:refresh-layout-kernel:2.1.0'      //核心必须依赖
+    implementation  'io.github.scwang90:refresh-header-classics:2.1.0'    //经典刷新头
+//    implementation  'io.github.scwang90:refresh-header-radar:2.1.0'       //雷达刷新头
+//    implementation  'io.github.scwang90:refresh-header-falsify:2.1.0'     //虚拟刷新头
+//    implementation  'io.github.scwang90:refresh-header-material:2.1.0'    //谷歌刷新头
+//    implementation  'io.github.scwang90:refresh-header-two-level:2.1.0'   //二级刷新头
+//    implementation  'io.github.scwang90:refresh-footer-ball:2.1.0'        //球脉冲加载
+    implementation  'io.github.scwang90:refresh-footer-classics:2.1.0'    //经典加载
+
+//    implementation 'com.huawei.hms:scan:1.1.3.301'//对SDK大小敏感的开发者
+    implementation 'com.huawei.hms:scanplus:1.1.3.301'//对SDK大小不敏感且希望所有机型均具备最佳体验的开发者
+
+
+
+}

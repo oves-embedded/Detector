@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!--solid标签: shape图形背景色-->
+    <!--PS: 这个和上面的gradient标签会互斥, 一个是设置背景色, 一个是设置渐变色-->
+    <solid android:color="#ffffff" />
+
+    <!--stroke标签: 边框(这里小数是有效的,但是会导致显示不全)-->
+    <!--width 边框的宽度-->
+    <!--color 边框的颜色-->
+    <!--下面两个参数是 把边框变成虚线用-->
+    <!--dashGap 虚线中空格的长度-->
+    <!--dashWidth 虚线中实线的长度-->
+<!--    <stroke-->
+<!--        android:width="1dp"-->
+<!--        android:color="@color/CustomColor7" />-->
+
+    <!--边角度圆化（圆角）-->
+    <!--针对部分场景，如顶部圆化，底部直角 或 顶部直角，底部圆化 可以考虑 radius内的下方属性-->
+    <!--指定方向的radius 优先于通用radius属性-->
+    <!--android:topRightRadius="5dp"-->
+    <!--android:topLeftRadius="5dp"-->
+    <!--android:bottomRightRadius="10dp"-->
+    <!--android:bottomLeftRadius="10dp"-->
+    <corners android:radius="5dp" />
+
+    <!--size标签 shape图形的宽度和高度  这里一般不用设置, 它的优先级没有控件的优先级大, 他指定控件的宽高就好, shape图形会随控件拉伸-->
+    <size
+        android:width="90dp"
+        android:height="90dp" />
+
+    <!--padding标签: 这里的padding是控件中间内容与shape图形图片的距离-->
+    <padding
+        android:left="2dp"
+        android:right="2dp" />
+
+    <!--gradient标签: 简单的说: 让图形变成一个有颜色梯度的-->
+    <!--渐变色 angle（角度方向，90度为上下渐变，0为左右渐变），-->
+    <!--angle 是颜色变换的角度, 默认是0, 取值必须是45的 倍数. 0: 是颜色从左边到右边, 90: 是颜色从底部到顶部, -->
+    <!--startColor centerColor endColor 一起使用: 开始的颜色, 中间的颜色, 结束的颜色-->
+    <!--centerX centerY是指定位置坐标, 取值是0.0f ~ 1.0f 之间, 例如: android:centerX="0.5f"  表示X方向的中间位置-->
+    <!--type 颜色渐变的类型, 取值类型有三种: linear/radial/sweep  -->
+    <!--linear 线性变化, 就是颜色从左往右, 从下往上-->
+    <!--radial 放射变化, 例如: 从一个圆中心到圆的边缘变化-->
+    <!--sweep 扫描式渐变, 类似雷达扫描的那种图形-->
+    <!--gradientRadius 和android:type="radial"一起连用, 半径-->
+<!--    <gradient-->
+<!--        android:angle="0"-->
+<!--        android:centerColor="#94C0F1"-->
+<!--        android:endColor="#1976D2"-->
+<!--        android:startColor="@color/white" />-->
+
+</shape>
