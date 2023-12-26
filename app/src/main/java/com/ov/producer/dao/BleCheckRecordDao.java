@@ -24,7 +24,7 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
      * Can be used for QueryBuilder and for referencing column names.
      */
     public static class Properties {
-        public final static Property Id = new Property(0, long.class, "id", true, "_id");
+        public final static Property Id = new Property(0, Long.class, "id", true, "_id");
         public final static Property Mac = new Property(1, String.class, "mac", false, "MAC");
         public final static Property BleName = new Property(2, String.class, "bleName", false, "BLE_NAME");
         public final static Property ScanStr = new Property(3, String.class, "scanStr", false, "SCAN_STR");
@@ -32,6 +32,8 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
         public final static Property SuffOpid = new Property(5, String.class, "suffOpid", false, "SUFF_OPID");
         public final static Property Opid = new Property(6, String.class, "opid", false, "OPID");
         public final static Property TestTime = new Property(7, java.util.Date.class, "testTime", false, "TEST_TIME");
+        public final static Property Flag = new Property(8, Boolean.class, "flag", false, "FLAG");
+        public final static Property Uploaded = new Property(9, Boolean.class, "uploaded", false, "UPLOADED");
     }
 
 
@@ -47,17 +49,21 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
     public static void createTable(Database db, boolean ifNotExists) {
         String constraint = ifNotExists? "IF NOT EXISTS ": "";
         db.execSQL("CREATE TABLE " + constraint + "\"BLE_CHECK_RECORD\" (" + //
-                "\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ," + // 0: id
+                "\"_id\" INTEGER PRIMARY KEY AUTOINCREMENT ," + // 0: id
                 "\"MAC\" TEXT," + // 1: mac
                 "\"BLE_NAME\" TEXT," + // 2: bleName
                 "\"SCAN_STR\" TEXT," + // 3: scanStr
                 "\"PRODUCT_NAME\" TEXT," + // 4: productName
                 "\"SUFF_OPID\" TEXT," + // 5: suffOpid
                 "\"OPID\" TEXT," + // 6: opid
-                "\"TEST_TIME\" INTEGER);"); // 7: testTime
+                "\"TEST_TIME\" INTEGER," + // 7: testTime
+                "\"FLAG\" INTEGER," + // 8: flag
+                "\"UPLOADED\" INTEGER);"); // 9: uploaded
         // Add Indexes
         db.execSQL("CREATE UNIQUE INDEX " + constraint + "IDX_BLE_CHECK_RECORD_MAC ON \"BLE_CHECK_RECORD\"" +
                 " (\"MAC\" ASC);");
+        db.execSQL("CREATE UNIQUE INDEX " + constraint + "IDX_BLE_CHECK_RECORD_SUFF_OPID ON \"BLE_CHECK_RECORD\"" +
+                " (\"SUFF_OPID\" ASC);");
     }
 
     /** Drops the underlying database table. */
@@ -69,7 +75,11 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
     @Override
     protected final void bindValues(DatabaseStatement stmt, BleCheckRecord entity) {
         stmt.clearBindings();
-        stmt.bindLong(1, entity.getId());
+ 
+        Long id = entity.getId();
+        if (id != null) {
+            stmt.bindLong(1, id);
+        }
  
         String mac = entity.getMac();
         if (mac != null) {
@@ -104,13 +114,27 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
         java.util.Date testTime = entity.getTestTime();
         if (testTime != null) {
             stmt.bindLong(8, testTime.getTime());
+        }
+ 
+        Boolean flag = entity.getFlag();
+        if (flag != null) {
+            stmt.bindLong(9, flag ? 1L: 0L);
+        }
+ 
+        Boolean uploaded = entity.getUploaded();
+        if (uploaded != null) {
+            stmt.bindLong(10, uploaded ? 1L: 0L);
         }
     }
 
     @Override
     protected final void bindValues(SQLiteStatement stmt, BleCheckRecord entity) {
         stmt.clearBindings();
-        stmt.bindLong(1, entity.getId());
+ 
+        Long id = entity.getId();
+        if (id != null) {
+            stmt.bindLong(1, id);
+        }
  
         String mac = entity.getMac();
         if (mac != null) {
@@ -146,31 +170,43 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
         if (testTime != null) {
             stmt.bindLong(8, testTime.getTime());
         }
+ 
+        Boolean flag = entity.getFlag();
+        if (flag != null) {
+            stmt.bindLong(9, flag ? 1L: 0L);
+        }
+ 
+        Boolean uploaded = entity.getUploaded();
+        if (uploaded != null) {
+            stmt.bindLong(10, uploaded ? 1L: 0L);
+        }
     }
 
     @Override
     public Long readKey(Cursor cursor, int offset) {
-        return cursor.getLong(offset + 0);
+        return cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0);
     }    
 
     @Override
     public BleCheckRecord readEntity(Cursor cursor, int offset) {
         BleCheckRecord entity = new BleCheckRecord( //
-            cursor.getLong(offset + 0), // id
+            cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0), // id
             cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1), // mac
             cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // bleName
             cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3), // scanStr
             cursor.isNull(offset + 4) ? null : cursor.getString(offset + 4), // productName
             cursor.isNull(offset + 5) ? null : cursor.getString(offset + 5), // suffOpid
             cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6), // opid
-            cursor.isNull(offset + 7) ? null : new java.util.Date(cursor.getLong(offset + 7)) // testTime
+            cursor.isNull(offset + 7) ? null : new java.util.Date(cursor.getLong(offset + 7)), // testTime
+            cursor.isNull(offset + 8) ? null : cursor.getShort(offset + 8) != 0, // flag
+            cursor.isNull(offset + 9) ? null : cursor.getShort(offset + 9) != 0 // uploaded
         );
         return entity;
     }
      
     @Override
     public void readEntity(Cursor cursor, BleCheckRecord entity, int offset) {
-        entity.setId(cursor.getLong(offset + 0));
+        entity.setId(cursor.isNull(offset + 0) ? null : cursor.getLong(offset + 0));
         entity.setMac(cursor.isNull(offset + 1) ? null : cursor.getString(offset + 1));
         entity.setBleName(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
         entity.setScanStr(cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3));
@@ -178,6 +214,8 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
         entity.setSuffOpid(cursor.isNull(offset + 5) ? null : cursor.getString(offset + 5));
         entity.setOpid(cursor.isNull(offset + 6) ? null : cursor.getString(offset + 6));
         entity.setTestTime(cursor.isNull(offset + 7) ? null : new java.util.Date(cursor.getLong(offset + 7)));
+        entity.setFlag(cursor.isNull(offset + 8) ? null : cursor.getShort(offset + 8) != 0);
+        entity.setUploaded(cursor.isNull(offset + 9) ? null : cursor.getShort(offset + 9) != 0);
      }
     
     @Override
@@ -197,7 +235,7 @@ public class BleCheckRecordDao extends AbstractDao<BleCheckRecord, Long> {
 
     @Override
     public boolean hasKey(BleCheckRecord entity) {
-        throw new UnsupportedOperationException("Unsupported for entities with a non-null key");
+        return entity.getId() != null;
     }
 
     @Override

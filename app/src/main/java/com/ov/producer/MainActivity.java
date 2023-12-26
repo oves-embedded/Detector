@@ -31,6 +31,8 @@ import com.huawei.hms.hmsscankit.ScanUtil;
 import com.huawei.hms.ml.scan.HmsScan;
 import com.huawei.hms.ml.scan.HmsScanAnalyzerOptions;
 import com.ov.producer.activity.CheckActivity;
+import com.ov.producer.activity.RecordActivity;
+import com.ov.producer.application.MyApplication;
 import com.ov.producer.constants.ReturnResult;
 import com.ov.producer.entity.BleCheckRecord;
 import com.ov.producer.entity.BleServiceDataDto;
@@ -48,7 +50,6 @@ import com.ov.producer.utils.permission.PermissionInterceptor;
 import com.ov.producer.utils.permission.PermissionNameConvert;
 import com.scwang.smart.refresh.layout.SmartRefreshLayout;
 import com.scwang.smart.refresh.layout.api.RefreshLayout;
-import com.scwang.smart.refresh.layout.listener.OnLoadMoreListener;
 import com.scwang.smart.refresh.layout.listener.OnRefreshListener;
 
 import org.greenrobot.eventbus.EventBus;
@@ -61,7 +62,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -76,21 +77,23 @@ public class MainActivity extends AppCompatActivity {
     RecyclerView recyclerView;
     @BindView(R.id.titleBar)
     TitleBar titleBar;
-
     private BleAdapter bleAdapter;
+    private int REQUEST_CODE_SCAN_ONE = 999;
 
-    private int REQUEST_CODE_SCAN_ONE=999;
+    private Map<String, BleCheckRecord> map = new ConcurrentHashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
         initService();
         initView();
         bleAdapter = new BleAdapter(R.layout.item_ble_detail);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(bleAdapter);
+
     }
 
     public void initView() {
@@ -118,18 +121,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLeftClick(TitleBar titleBar) {
                 OnTitleBarListener.super.onLeftClick(titleBar);
-                XXPermissions.with(MainActivity.this)
-                        .permission(Permission.CAMERA)
-                        .permission(Permission.READ_EXTERNAL_STORAGE)
-                        .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
-                            @Override
-                            public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
-                                if(!allGranted){
-                                    return;
-                                }
-                                ScanUtil.startScan(MainActivity.this, REQUEST_CODE_SCAN_ONE, new HmsScanAnalyzerOptions.Creator().create());
-                            }
-                        });
+                XXPermissions.with(MainActivity.this).permission(Permission.CAMERA).permission(Permission.READ_EXTERNAL_STORAGE).interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+                    @Override
+                    public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
+                        if (!allGranted) {
+                            return;
+                        }
+                        ScanUtil.startScan(MainActivity.this, REQUEST_CODE_SCAN_ONE, new HmsScanAnalyzerOptions.Creator().create());
+                    }
+                });
             }
 
             @Override
@@ -140,30 +140,25 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onRightClick(TitleBar titleBar) {
                 OnTitleBarListener.super.onRightClick(titleBar);
+
+                startActivity(new Intent(MainActivity.this, RecordActivity.class));
             }
         });
     }
 
     private void startScan() {
-        XXPermissions.with(MainActivity.this)
-                .permission(Permission.BLUETOOTH_SCAN)
-                .permission(Permission.BLUETOOTH_CONNECT)
-                .permission(Permission.BLUETOOTH_ADVERTISE)
-                .permission(Permission.ACCESS_FINE_LOCATION)
-                .permission(Permission.ACCESS_COARSE_LOCATION)
-                .permission(Permission.ACCESS_BACKGROUND_LOCATION)
-                .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
-                    @Override
-                    public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
-                        if (!allGranted) {
-                            return;
-                        }
-                        if (bleService != null) {
-                            bleService.startBleScan();
-                        }
-                        Toaster.show(String.format(getString(R.string.demo_obtain_permission_success_hint), PermissionNameConvert.getPermissionString(MainActivity.this, permissions)));
-                    }
-                });
+        XXPermissions.with(MainActivity.this).permission(Permission.BLUETOOTH_SCAN).permission(Permission.BLUETOOTH_CONNECT).permission(Permission.BLUETOOTH_ADVERTISE).permission(Permission.ACCESS_FINE_LOCATION).permission(Permission.ACCESS_COARSE_LOCATION).permission(Permission.ACCESS_BACKGROUND_LOCATION).interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+            @Override
+            public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
+                if (!allGranted) {
+                    return;
+                }
+                if (bleService != null) {
+                    bleService.startBleScan();
+                }
+                Toaster.show(String.format(getString(R.string.demo_obtain_permission_success_hint), PermissionNameConvert.getPermissionString(MainActivity.this, permissions)));
+            }
+        });
     }
 
     private void initService() {
@@ -193,13 +188,13 @@ public class MainActivity extends AppCompatActivity {
             bleAdapter.setNewInstance(list);
         }
 
-        if(msg.getTagEnum() == EventBusTagEnum.NOT_SUPPORT_LE){
+        if (msg.getTagEnum() == EventBusTagEnum.NOT_SUPPORT_LE) {
             Toaster.show("该设备不支持低功耗蓝牙");
         }
-        if(msg.getTagEnum() == EventBusTagEnum.NOT_ENABLE_LE){
+        if (msg.getTagEnum() == EventBusTagEnum.NOT_ENABLE_LE) {
             Toaster.show("请打开蓝牙开关");
         }
-        if(msg.getTagEnum() == EventBusTagEnum.BLE_INIT_ERROR){
+        if (msg.getTagEnum() == EventBusTagEnum.BLE_INIT_ERROR) {
             Toaster.show("蓝牙程序初始化失败");
         }
 
@@ -223,6 +218,17 @@ public class MainActivity extends AppCompatActivity {
             String address = info.getMac();
             if (!TextUtils.isEmpty(address)) {
                 baseViewHolder.setText(R.id.tv_mac, address);
+            }
+
+            BleCheckRecord checkRecord = map.get(info.getMac());
+            if (checkRecord != null && checkRecord.getFlag() != null) {
+                if (checkRecord.getFlag()) {
+                    baseViewHolder.setBackgroundResource(R.id.ll_item, R.drawable.shape_circle_check_ok);
+                } else {
+                    baseViewHolder.setBackgroundResource(R.id.ll_item, R.drawable.shape_circle_check_err);
+                }
+            } else {
+                baseViewHolder.setBackgroundResource(R.id.ll_item, R.drawable.shape_circle_check_null);
             }
 
             baseViewHolder.getView(R.id.ll_item).setOnClickListener(new View.OnClickListener() {
@@ -304,6 +310,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         EventBus.getDefault().register(this);
+        map.clear();
+        List<BleCheckRecord> bleCheckRecords = MyApplication.sDaoSession.getBleCheckRecordDao().loadAll();
+        if (bleCheckRecords != null) {
+            for (BleCheckRecord record : bleCheckRecords) {
+                map.put(record.getMac(), record);
+            }
+        }
+        if(bleService!=null){
+            List<BleCheckRecord> bleList = bleService.getBleList();
+            bleAdapter.setNewInstance(bleList);
+        }
     }
 
     @Override
@@ -322,13 +339,13 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_SCAN_ONE) {
             HmsScan obj = data.getParcelableExtra(ScanUtil.RESULT);
             if (obj != null) {
-                Toast.makeText(this,obj.originalValue,Toast.LENGTH_SHORT).show();
-                if(obj.originalValue!=null&&obj.originalValue.length()>6){
+                Toast.makeText(this, obj.originalValue, Toast.LENGTH_SHORT).show();
+                if (obj.originalValue != null && obj.originalValue.length() > 6) {
                     String substring = obj.originalValue.substring(obj.originalValue.length() - 6);
                     Toast.makeText(MainActivity.this, substring, Toast.LENGTH_SHORT).show();
-                    if(bleService!=null){
+                    if (bleService != null) {
                         BleCheckRecord suffKeywordBle = bleService.findSuffKeywordBle(substring);
-                        if(suffKeywordBle==null){
+                        if (suffKeywordBle == null) {
                             Toaster.show("未扫描到该设备");
                             return;
                         }
@@ -336,7 +353,7 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra("data", JSON.toJSONString(suffKeywordBle));
                         startActivity(intent);
                     }
-                }else{
+                } else {
                     Toaster.show("对不起，条码错误！");
                 }
             }

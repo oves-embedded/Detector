@@ -11,7 +11,7 @@ import java.util.Date;
 public class BleCheckRecord {
 
     @Id(autoincrement = true)
-    private long id;
+    private Long id;
 
     @Index(unique = true)
     private String mac;
@@ -22,17 +22,23 @@ public class BleCheckRecord {
 
     private String productName;
 
+    @Index(unique = true)
     private String suffOpid;
 
     private String opid;
 
     private Date testTime;
 
+    private Boolean flag;
+
+    private Boolean uploaded;
 
 
-    @Generated(hash = 1044611810)
-    public BleCheckRecord(long id, String mac, String bleName, String scanStr,
-            String productName, String suffOpid, String opid, Date testTime) {
+
+    @Generated(hash = 295986485)
+    public BleCheckRecord(Long id, String mac, String bleName, String scanStr,
+            String productName, String suffOpid, String opid, Date testTime,
+            Boolean flag, Boolean uploaded) {
         this.id = id;
         this.mac = mac;
         this.bleName = bleName;
@@ -41,6 +47,8 @@ public class BleCheckRecord {
         this.suffOpid = suffOpid;
         this.opid = opid;
         this.testTime = testTime;
+        this.flag = flag;
+        this.uploaded = uploaded;
     }
 
     @Generated(hash = 1042166380)
@@ -48,12 +56,27 @@ public class BleCheckRecord {
     }
 
 
+    public Boolean getUploaded() {
+        return uploaded;
+    }
 
-    public long getId() {
+    public void setUploaded(Boolean uploaded) {
+        this.uploaded = uploaded;
+    }
+
+    public Boolean getFlag() {
+        return flag;
+    }
+
+    public void setFlag(Boolean flag) {
+        this.flag = flag;
+    }
+
+    public Long getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -112,5 +135,6 @@ public class BleCheckRecord {
     public void setTestTime(Date testTime) {
         this.testTime = testTime;
     }
+
 
 }

@@ -9,6 +9,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -19,9 +20,13 @@ import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.viewholder.BaseViewHolder;
 import com.hjq.bar.OnTitleBarListener;
 import com.hjq.bar.TitleBar;
+import com.hjq.permissions.OnPermissionCallback;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
 import com.hjq.toast.Toaster;
 import com.ov.producer.MainActivity;
 import com.ov.producer.R;
+import com.ov.producer.application.MyApplication;
 import com.ov.producer.constants.ReturnResult;
 import com.ov.producer.entity.BleCheckRecord;
 import com.ov.producer.entity.BleServiceDataDto;
@@ -33,15 +38,19 @@ import com.ov.producer.enums.ServiceNameEnum;
 import com.ov.producer.service.BleService;
 import com.ov.producer.utils.BleDeviceUtil;
 import com.ov.producer.utils.LogUtil;
+import com.ov.producer.utils.permission.PermissionInterceptor;
+import com.ov.producer.utils.permission.PermissionNameConvert;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -55,9 +64,12 @@ public class CheckActivity extends AppCompatActivity {
     RecyclerView recyclerView;
     @BindView(R.id.confirm_button)
     Button confirm_button;
+    @BindView(R.id.fail_button)
+    Button fail_button;
     private AttrAdapter attrAdapter;
     private BleService bleService;
     private BleDeviceUtil bleDeviceUtil;
+    private String opid;
     private List<OvAttrDto> list;
 
     @Override
@@ -68,6 +80,7 @@ public class CheckActivity extends AppCompatActivity {
 
         String data = getIntent().getStringExtra("data");
         BleCheckRecord checkRecord = JSON.parseObject(data, BleCheckRecord.class);
+//        MyApplication.sDaoSession.getBleCheckRecordDao().deleteAll();
 
         titleBar.setOnTitleBarListener(new OnTitleBarListener() {
             @Override
@@ -98,7 +111,53 @@ public class CheckActivity extends AppCompatActivity {
         confirm_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                finish();
+                XXPermissions.with(CheckActivity.this).permission(
+                                Permission.READ_EXTERNAL_STORAGE)
+                        .permission(Permission.WRITE_EXTERNAL_STORAGE)
+                        .permission(Permission.READ_PHONE_STATE)
+                        .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+                            @Override
+                            public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
+                                if (!allGranted) {
+                                    Toaster.show("权限获取失败");
+                                    return;
+                                }
+                                checkRecord.setTestTime(new Date());
+                                checkRecord.setScanStr(JSON.toJSONString(list));
+                                checkRecord.setOpid(opid);
+                                checkRecord.setUploaded(false);
+                                checkRecord.setFlag(true);
+                                long insert = MyApplication.sDaoSession.getBleCheckRecordDao().insertOrReplace(checkRecord);
+                                Toaster.show("当前插入行：" + insert);
+                                Toaster.show(String.format(getString(R.string.demo_obtain_permission_success_hint), PermissionNameConvert.getPermissionString(CheckActivity.this, permissions)));
+                                CheckActivity.this.finish();
+                            }
+                        });
+            }
+        });
+        fail_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                XXPermissions.with(CheckActivity.this).permission(
+                                Permission.READ_EXTERNAL_STORAGE)
+                        .permission(Permission.WRITE_EXTERNAL_STORAGE)
+                        .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+                            @Override
+                            public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
+                                if (!allGranted) {
+                                    Toaster.show("权限获取失败");
+                                    return;
+                                }
+                                checkRecord.setTestTime(new Date());
+                                checkRecord.setScanStr(JSON.toJSONString(list));
+                                checkRecord.setOpid(opid);
+                                checkRecord.setFlag(false);
+                                checkRecord.setUploaded(false);
+                                long insert = MyApplication.sDaoSession.getBleCheckRecordDao().insertOrReplace(checkRecord);
+                                Toaster.show(String.format(getString(R.string.demo_obtain_permission_success_hint), PermissionNameConvert.getPermissionString(CheckActivity.this, permissions)));
+                                CheckActivity.this.finish();
+                            }
+                        });
             }
         });
 
@@ -115,7 +174,7 @@ public class CheckActivity extends AppCompatActivity {
                         Toaster.show("蓝牙连接成功，正在读取设备信息！");
                         checkData();
                         Toaster.show("数据读取完成，请检查是否有误！");
-                    }else{
+                    } else {
                         Toaster.show("蓝牙连接失败，请检查设备是否正常或已被其他设备连接！");
                     }
                 } catch (Exception e) {
@@ -131,7 +190,7 @@ public class CheckActivity extends AppCompatActivity {
             Set<String> keySet = serviceDataDtoMap.keySet();
             for (String serviceUUID : keySet) {
                 BleServiceDataDto bleServiceDataDto = serviceDataDtoMap.get(serviceUUID);
-                if (serviceUUID.startsWith(ServiceNameEnum.DIA_SERVICE_NAME.getPrefixCode()) || serviceUUID.startsWith(ServiceNameEnum.ATT_SERVICE_NAME.getPrefixCode())) {
+                if (serviceUUID.startsWith(ServiceNameEnum.ATT_SERVICE_NAME.getPrefixCode())) {
                     Map<String, CharacteristicDataDto> characteristicDataMap = bleServiceDataDto.getCharacteristicDataMap();
                     if (characteristicDataMap != null) {
                         Collection<CharacteristicDataDto> values = characteristicDataMap.values();
@@ -165,7 +224,8 @@ public class CheckActivity extends AppCompatActivity {
                                                     ovAttrDto.setValType(characteristicDataDto.getValType());
                                                     ovAttrDto.setServiceUUID(characteristicDataDto.getParentServiceUUID());
                                                     ovAttrDto.setCharacteristicUUID(characteristicDataDto.getCharacteristicUUID());
-                                                    if(list==null)list=new CopyOnWriteArrayList<>();
+                                                    if (list == null)
+                                                        list = new CopyOnWriteArrayList<>();
                                                     list.add(ovAttrDto);
                                                     LogUtil.info(serviceUUID + ">" + characteristicDataDto.getCharacteristicUUID() + ":" + JSON.toJSONString(ovAttrDto));
 
@@ -174,9 +234,10 @@ public class CheckActivity extends AppCompatActivity {
                                                         public void run() {
                                                             if (ovAttrDto.getName().equals("opid")) {
                                                                 titleBar.setTitle(ovAttrDto.getValue().toString());
+                                                                opid = ovAttrDto.getValue().toString();
                                                             }
                                                             attrAdapter.setNewInstance(list);
-                                                            recyclerView.scrollToPosition(list.size()-1);
+                                                            recyclerView.scrollToPosition(list.size() - 1);
                                                         }
                                                     });
                                                 }
@@ -203,12 +264,13 @@ public class CheckActivity extends AppCompatActivity {
         protected void convert(BaseViewHolder baseViewHolder, OvAttrDto dto) {
             baseViewHolder.setText(R.id.tv_name, dto.getName() + " :" + (dto.getValue() == null ? "<空>" : dto.getValue().toString()));
             baseViewHolder.setText(R.id.tv_desc, dto.getDesc());
-            if(dto.getValue()==null){
-                baseViewHolder.setBackgroundResource(R.id.ll_item,R.drawable.shape_circle_check_err);
-            }else{
-                baseViewHolder.setBackgroundResource(R.id.ll_item,R.drawable.shape_circle_check_ok);
+            if (dto.getValue() == null) {
+                baseViewHolder.setBackgroundResource(R.id.ll_item, R.drawable.shape_circle_check_err);
+            } else {
+                baseViewHolder.setBackgroundResource(R.id.ll_item, R.drawable.shape_circle_check_ok);
             }
         }
+
     }
 
     @Override

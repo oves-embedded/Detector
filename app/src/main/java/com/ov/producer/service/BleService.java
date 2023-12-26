@@ -65,7 +65,6 @@ public class BleService extends Service {
     }
 
 
-
     public void initBleConfig() {
         try {
             BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
@@ -197,7 +196,7 @@ public class BleService extends Service {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             BluetoothDevice device = result.getDevice();
-            Log.e("scanBle->onScanStarted", device.getAddress() + "," + device.getName());
+//            Log.e("scanBle->onScanStarted", device.getAddress() + "," + device.getName());
             String bleName = device.getName();
             if (!TextUtils.isEmpty(bleName)) {
                 bleName = bleName.trim();
@@ -225,9 +224,9 @@ public class BleService extends Service {
                 }
                 bleDeviceMap.put(device.getAddress(), device);
                 if (bleDeviceInfoMap.containsKey(device.getAddress())) {
-                    LogUtil.info("==========find device/update device info" + JSON.toJSONString(checkRecord) + "==========");
+//                    LogUtil.info("==========find device/update device info" + JSON.toJSONString(checkRecord) + "==========");
                 } else {
-                    LogUtil.info("==========find new device" + JSON.toJSONString(checkRecord) + "==========");
+//                    LogUtil.info("==========find new device" + JSON.toJSONString(checkRecord) + "==========");
                 }
                 bleDeviceInfoMap.put(device.getAddress(), checkRecord);
                 EventBus.getDefault().post(new EventBusMsg(EventBusTagEnum.BLE_FIND, new ArrayList<>(bleDeviceInfoMap.values())));

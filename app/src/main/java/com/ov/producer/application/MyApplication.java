@@ -58,7 +58,7 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         // 1、获取需要连接的数据库
-        mDevOpenHelper = new DaoMaster.DevOpenHelper(getApplicationContext(), "ov_producer.db");
+        mDevOpenHelper = new DaoMaster.DevOpenHelper(getApplicationContext(), "ov_producerv2.db");
         // 2、创建数据库连接
         mDaoMaster = new DaoMaster(mDevOpenHelper.getWritableDb());
         // 3、创建数据库会话

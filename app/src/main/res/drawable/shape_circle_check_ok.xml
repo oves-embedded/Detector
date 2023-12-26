@@ -26,9 +26,9 @@
     <corners android:radius="5dp" />
 
     <!--size标签 shape图形的宽度和高度  这里一般不用设置, 它的优先级没有控件的优先级大, 他指定控件的宽高就好, shape图形会随控件拉伸-->
-    <size
-        android:width="90dp"
-        android:height="90dp" />
+<!--    <size-->
+<!--        android:width="90dp"-->
+<!--        android:height="90dp" />-->
 
     <!--padding标签: 这里的padding是控件中间内容与shape图形图片的距离-->
     <padding
