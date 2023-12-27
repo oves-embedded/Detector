@@ -103,6 +103,7 @@ public class BleService extends Service {
             BleDeviceUtil bleDeviceUtil = new BleDeviceUtil(bleDevice, BleService.this);
             boolean b = bleDeviceUtil.connectGatt();
             if (b) {
+                bleDeviceUtil.setMtu(100);
                 return bleDeviceUtil;
             }
             bleDeviceUtil.destroy();
