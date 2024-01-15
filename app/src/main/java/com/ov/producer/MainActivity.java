@@ -121,7 +121,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLeftClick(TitleBar titleBar) {
                 OnTitleBarListener.super.onLeftClick(titleBar);
-                XXPermissions.with(MainActivity.this).permission(Permission.CAMERA).permission(Permission.READ_EXTERNAL_STORAGE).interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+                XXPermissions.with(MainActivity.this)
+                        .permission(Permission.CAMERA)
+                        .permission(Permission.READ_EXTERNAL_STORAGE)
+                        .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
                     @Override
                     public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
                         if (!allGranted) {
@@ -147,7 +150,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startScan() {
-        XXPermissions.with(MainActivity.this).permission(Permission.BLUETOOTH_SCAN).permission(Permission.BLUETOOTH_CONNECT).permission(Permission.BLUETOOTH_ADVERTISE).permission(Permission.ACCESS_FINE_LOCATION).permission(Permission.ACCESS_COARSE_LOCATION).permission(Permission.ACCESS_BACKGROUND_LOCATION).interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
+        XXPermissions.with(MainActivity.this)
+                .permission(Permission.BLUETOOTH_SCAN)
+                .permission(Permission.BLUETOOTH_CONNECT)
+                .permission(Permission.BLUETOOTH_ADVERTISE)
+                .permission(Permission.ACCESS_FINE_LOCATION)
+                .permission(Permission.ACCESS_COARSE_LOCATION)
+                .permission(Permission.ACCESS_BACKGROUND_LOCATION)
+                .interceptor(new PermissionInterceptor()).request(new OnPermissionCallback() {
             @Override
             public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
                 if (!allGranted) {

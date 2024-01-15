@@ -119,7 +119,6 @@ public class CheckActivity extends AppCompatActivity {
                             @Override
                             public void onGranted(@NonNull List<String> permissions, boolean allGranted) {
                                 if (!allGranted) {
-                                    Toaster.show("权限获取失败");
                                     return;
                                 }
                                 checkRecord.setTestTime(new Date());
@@ -128,7 +127,6 @@ public class CheckActivity extends AppCompatActivity {
                                 checkRecord.setUploaded(false);
                                 checkRecord.setFlag(true);
                                 long insert = MyApplication.sDaoSession.getBleCheckRecordDao().insertOrReplace(checkRecord);
-                                Toaster.show("当前插入行：" + insert);
                                 Toaster.show(String.format(getString(R.string.demo_obtain_permission_success_hint), PermissionNameConvert.getPermissionString(CheckActivity.this, permissions)));
                                 CheckActivity.this.finish();
                             }
