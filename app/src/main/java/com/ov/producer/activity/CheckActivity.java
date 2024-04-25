@@ -15,9 +15,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.alibaba.fastjson.JSON;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.viewholder.BaseViewHolder;
+import com.google.gson.Gson;
 import com.hjq.bar.OnTitleBarListener;
 import com.hjq.bar.TitleBar;
 import com.hjq.permissions.OnPermissionCallback;
@@ -72,6 +72,8 @@ public class CheckActivity extends AppCompatActivity {
     private String opid;
     private List<OvAttrDto> list;
 
+    BleCheckRecord checkRecord;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,7 +81,7 @@ public class CheckActivity extends AppCompatActivity {
         ButterKnife.bind(this);
 
         String data = getIntent().getStringExtra("data");
-        BleCheckRecord checkRecord = JSON.parseObject(data, BleCheckRecord.class);
+        checkRecord = new Gson().fromJson(data, BleCheckRecord.class);
 //        MyApplication.sDaoSession.getBleCheckRecordDao().deleteAll();
 
         titleBar.setOnTitleBarListener(new OnTitleBarListener() {
@@ -122,7 +124,7 @@ public class CheckActivity extends AppCompatActivity {
                                     return;
                                 }
                                 checkRecord.setTestTime(new Date());
-                                checkRecord.setScanStr(JSON.toJSONString(list));
+                                checkRecord.setScanStr(new Gson().toJson(list));
                                 checkRecord.setOpid(opid);
                                 checkRecord.setUploaded(false);
                                 checkRecord.setFlag(true);
@@ -147,7 +149,7 @@ public class CheckActivity extends AppCompatActivity {
                                     return;
                                 }
                                 checkRecord.setTestTime(new Date());
-                                checkRecord.setScanStr(JSON.toJSONString(list));
+                                checkRecord.setScanStr(new Gson().toJson(list));
                                 checkRecord.setOpid(opid);
                                 checkRecord.setFlag(false);
                                 checkRecord.setUploaded(false);
@@ -225,7 +227,7 @@ public class CheckActivity extends AppCompatActivity {
                                                     if (list == null)
                                                         list = new CopyOnWriteArrayList<>();
                                                     list.add(ovAttrDto);
-                                                    LogUtil.info(serviceUUID + ">" + characteristicDataDto.getCharacteristicUUID() + ":" + JSON.toJSONString(ovAttrDto));
+                                                    LogUtil.info(serviceUUID + ">" + characteristicDataDto.getCharacteristicUUID() + ":" + new Gson().toJson(ovAttrDto));
 
                                                     CheckActivity.this.runOnUiThread(new Runnable() {
                                                         @Override
@@ -233,6 +235,9 @@ public class CheckActivity extends AppCompatActivity {
                                                             if (ovAttrDto.getName().equals("opid")) {
                                                                 titleBar.setTitle(ovAttrDto.getValue().toString());
                                                                 opid = ovAttrDto.getValue().toString();
+                                                                if (bleService != null) {
+                                                                    bleService.publishMsg2ProductMqtt(opid, checkRecord.getProductName());
+                                                                }
                                                             }
                                                             attrAdapter.setNewInstance(list);
                                                             recyclerView.scrollToPosition(list.size() - 1);

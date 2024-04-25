@@ -4,6 +4,7 @@ import static com.ov.producer.enums.EventBusTagEnum.BLE_INIT_ERROR;
 import static com.ov.producer.enums.EventBusTagEnum.NOT_ENABLE_LE;
 import static com.ov.producer.enums.EventBusTagEnum.NOT_SUPPORT_LE;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -12,18 +13,22 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.text.TextUtils;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 
-import com.alibaba.fastjson.JSON;
-import com.ov.producer.application.MyApplication;
+import com.google.gson.Gson;
 import com.ov.producer.constants.ReturnResult;
-import com.ov.producer.dao.BleCheckRecordDao;
 import com.ov.producer.entity.BleCheckRecord;
 import com.ov.producer.entity.BleServiceDataDto;
 import com.ov.producer.entity.CharacteristicDataDto;
@@ -35,20 +40,32 @@ import com.ov.producer.enums.EventBusTagEnum;
 import com.ov.producer.enums.ServiceNameEnum;
 import com.ov.producer.utils.BleDeviceUtil;
 import com.ov.producer.utils.LogUtil;
+import com.ov.producer.utils.MqttClientUtil;
 
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.greenrobot.eventbus.EventBus;
 
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class BleService extends Service {
+public class BleService extends Service implements MqttCallback, LocationListener {
 
     private Map<String, BluetoothDevice> bleDeviceMap = new ConcurrentHashMap<>();
 
@@ -57,11 +74,31 @@ public class BleService extends Service {
     private BluetoothAdapter bluetoothAdapter;
     //low power ble
     private BluetoothLeScanner bluetoothLeScanner;
+    private MqttClientUtil productMqttClientUtil;
+
+    LocationManager locationManager = null;
+
+    private Location currentLocation = null;
+
 
     @Override
     public void onCreate() {
         super.onCreate();
         initBleConfig();
+        productMqttClientUtil = new MqttClientUtil("mqtt-factory.omnivoltaic.com", "18883", "Admin", "7xzUV@MT", BleService.this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                productMqttClientUtil.createConnect();
+            }
+        }).start();
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000l, 10f, BleService.this);
+
     }
 
 
@@ -84,12 +121,12 @@ public class BleService extends Service {
         }
     }
 
-    public BleCheckRecord findSuffKeywordBle(String suffKeyword){
+    public BleCheckRecord findSuffKeywordBle(String suffKeyword) {
         Collection<BleCheckRecord> values = bleDeviceInfoMap.values();
         Iterator<BleCheckRecord> iterator = values.iterator();
-        while(iterator.hasNext()){
+        while (iterator.hasNext()) {
             BleCheckRecord next = iterator.next();
-            if(next.getBleName().endsWith(suffKeyword)){
+            if (next.getBleName().endsWith(suffKeyword)) {
                 return next;
             }
         }
@@ -115,7 +152,7 @@ public class BleService extends Service {
         Map<String, OvAttrDto> dtoMap = null;
         if (bleDeviceUtil != null) {
             Map<String, BleServiceDataDto> serviceDataDtoMap = bleDeviceUtil.getServiceDataDtoMap();
-            LogUtil.info("!!!!!!!!!!checkData:" + JSON.toJSONString(serviceDataDtoMap));
+            LogUtil.info("!!!!!!!!!!checkData:" + new Gson().toJson(serviceDataDtoMap));
             Set<String> keySet = serviceDataDtoMap.keySet();
             for (String serviceUUID : keySet) {
                 BleServiceDataDto bleServiceDataDto = serviceDataDtoMap.get(serviceUUID);
@@ -163,13 +200,53 @@ public class BleService extends Service {
                                     }
                                 }
                             }
-                            LogUtil.info(serviceUUID + ">" + characteristicDataDto.getCharacteristicUUID() + ":" + JSON.toJSONString(dtoMap));
+                            LogUtil.info(serviceUUID + ">" + characteristicDataDto.getCharacteristicUUID() + ":" + new Gson().toJson(dtoMap));
                         }
                     }
                 }
             }
         }
         return dtoMap;
+    }
+
+
+    public void publishMsg2ProductMqtt(String opId, String productName) {
+        /**
+         * {
+         * "ctod":”Greenwich Mean Time”
+         *       "opid": "OEM Device ID. Factory set."
+         *       "slon":"Satellite Longitude in DD (decimal degrees)"
+         *       "slat":"Satellite Latitude in DD (decimal degrees)"
+         * "cudu": "Currently uploaded data users"
+         * }
+         */
+        Map<String, String> dtoMap = new HashMap<String, String>();
+        // 设置要显示的格式（这里选择了ISO-8601格式）
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+        // 设置时区为UTC+0
+        TimeZone timeZone = TimeZone.getTimeZone("UTC+0");
+        sdf.setTimeZone(timeZone);
+        // 进行日期格式化并输出结果
+        String formattedDate = sdf.format(new Date());
+        dtoMap.put("ctod", formattedDate);
+        dtoMap.put("opid", opId);
+        double slon = 0L;
+        double slat = 0L;
+        if (currentLocation != null) {
+            slon = currentLocation.getLongitude();
+            slat = currentLocation.getLatitude();
+        }
+        dtoMap.put("slon", slon + "");
+        dtoMap.put("slat", slat + "");
+        dtoMap.put("cudu", "#");
+
+        if (productMqttClientUtil != null) {
+            //dt/V01/BLEPHONE/产品类型代号/设备ID
+            String topic = "dt/V01/BLEPHONE/" + productName + "/" + opId;
+            String content = new Gson().toJson(dtoMap);
+            LogUtil.error("publishMsg2ProductMqtt:" + topic + ">" + content);
+            productMqttClientUtil.publish(topic, 0, content.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
 
@@ -262,9 +339,49 @@ public class BleService extends Service {
         return new BleServiceBinder();
     }
 
+    @Override
+    public void connectionLost(Throwable cause) {
+
+    }
+
+    @Override
+    public void messageArrived(String topic, MqttMessage message) throws Exception {
+
+    }
+
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken token) {
+
+    }
+
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+        currentLocation = location;
+    }
+
+    @Override
+    public void onProviderEnabled(@NonNull String provider) {
+        LocationListener.super.onProviderEnabled(provider);
+    }
+
+    @Override
+    public void onProviderDisabled(@NonNull String provider) {
+        LocationListener.super.onProviderDisabled(provider);
+    }
+
     public class BleServiceBinder extends Binder {
         public BleService getService() {
             return BleService.this;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if (productMqttClientUtil != null) {
+            productMqttClientUtil.release();
+            productMqttClientUtil = null;
         }
     }
 }

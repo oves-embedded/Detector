@@ -18,9 +18,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import com.alibaba.fastjson.JSON;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.viewholder.BaseViewHolder;
+import com.google.gson.Gson;
 import com.hjq.bar.OnTitleBarListener;
 import com.hjq.bar.TitleBar;
 import com.hjq.permissions.OnPermissionCallback;
@@ -189,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void subscriber(EventBusMsg msg) {
-        LogUtil.error(JSON.toJSONString(msg));
         if (msg.getTagEnum() == EventBusTagEnum.BLE_FIND) {
             if (refreshLayout.isRefreshing()) {
                 refreshLayout.finishRefresh();
@@ -246,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     if (bleService != null) {
                         Intent intent = new Intent(MainActivity.this, CheckActivity.class);
-                        intent.putExtra("data", JSON.toJSONString(info));
+                        intent.putExtra("data", new Gson().toJson(info));
                         startActivity(intent);
                     }
                 }
@@ -259,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
         Map<String, OvAttrDto> dtoMap = null;
         if (bleDeviceUtil != null) {
             Map<String, BleServiceDataDto> serviceDataDtoMap = bleDeviceUtil.getServiceDataDtoMap();
-            LogUtil.info("!!!!!!!!!!checkData:" + JSON.toJSONString(serviceDataDtoMap));
+            LogUtil.info("!!!!!!!!!!checkData:" + new Gson().toJson(serviceDataDtoMap));
             Set<String> keySet = serviceDataDtoMap.keySet();
             for (String serviceUUID : keySet) {
                 BleServiceDataDto bleServiceDataDto = serviceDataDtoMap.get(serviceUUID);
@@ -360,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
                         Intent intent = new Intent(MainActivity.this, CheckActivity.class);
-                        intent.putExtra("data", JSON.toJSONString(suffKeywordBle));
+                        intent.putExtra("data", new Gson().toJson(suffKeywordBle));
                         startActivity(intent);
                     }
                 } else {
