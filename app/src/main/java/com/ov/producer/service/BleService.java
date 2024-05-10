@@ -85,7 +85,7 @@ public class BleService extends Service implements MqttCallback, LocationListene
     public void onCreate() {
         super.onCreate();
         initBleConfig();
-        productMqttClientUtil = new MqttClientUtil("mqtt-factory.omnivoltaic.com", "18883", "Admin", "7xzUV@MT", BleService.this);
+        productMqttClientUtil = new MqttClientUtil("mqtt-factory.omnivoltaic.com", "1883", "Admin", "7xzUV@MT", BleService.this);
         new Thread(new Runnable() {
             @Override
             public void run() {

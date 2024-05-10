@@ -14,33 +14,22 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
-public class MqttClientManager {
-
-    private static MqttClientManager mInstance;
-
+public class MqttClientUtil {
     private String address = "mqtt-factory.omnivoltaic.com:1883";
 
+    String username;
+    String password;
     private MqttConnectOptions options;
 
     private MqttClient client;
 
     private MqttCallback callback;
 
-
-    private MqttClientManager(MqttCallback callback) {
+    public MqttClientUtil(String ip, String port, String username, String password, MqttCallback callback) {
+        this.address = "tcp://" + ip + ":" + port;
         this.callback = callback;
-    }
-
-    public static MqttClientManager getInstance(MqttCallback callback) {
-        if (mInstance == null) {
-            synchronized (MqttClientManager.class) {
-                if (mInstance == null) {
-                    mInstance = new MqttClientManager(callback);
-                }
-            }
-        }
-        return mInstance;
+        this.username = username;
+        this.password = password;
     }
 
 
@@ -53,9 +42,9 @@ public class MqttClientManager {
      */
     public void release() {
         try {
-            if (mInstance != null) {
-                mInstance.disConnect();
-                mInstance = null;
+            if (client != null) {
+                disConnect();
+                client = null;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -104,10 +93,12 @@ public class MqttClientManager {
         }
     }
 
-    public boolean createConnect(String brokerUrl, String userName, String password) {
+    public boolean createConnect() {
         if (client != null && client.isConnected()) {
             LogUtil.debug("===========client connected==============");
             return true;
+        } else {
+            release();
         }
         boolean flag = false;
         try {
@@ -119,11 +110,11 @@ public class MqttClientManager {
             if (!TextUtils.isEmpty(password)) {
                 options.setPassword(password.toCharArray());
             }
-            if (!TextUtils.isEmpty(userName)) {
-                options.setUserName(userName);
+            if (!TextUtils.isEmpty(username)) {
+                options.setUserName(username);
             }
             //MqttDefaultFilePersistence||MemoryPersistence
-            client = new MqttClient(brokerUrl, UUID.randomUUID().toString().replace("-", "").trim(), new MemoryPersistence());
+            client = new MqttClient(address, UUID.randomUUID().toString().replace("-", "").trim(), new MemoryPersistence());
             client.setCallback(callback);
             flag = doConnect();
         } catch (MqttException e) {
